@@ -24,6 +24,14 @@ TICKERS = ["NVDA", "MSFT", "AAPL", "AMZN", "GOOG", "META", "AVGO", "TSLA", "JPM"
            # "VRTX", "COP", "APH", "MDT", "CB", "NKE", "SBUX", "LMT", "MMC", "ICE",
            ]
 DAYS_LOOKBACK = 90
+def calculate_ao(median_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Awesome Oscillator: SMA5(median_price) - SMA34(median_price)
+    median_df should be a DataFrame where each column is (High+Low)/2 for a ticker.
+    """
+    sma5  = median_df.rolling(window=5,  min_periods=5).mean()
+    sma34 = median_df.rolling(window=34, min_periods=34).mean()
+    return sma5 - sma34
 
 # -- STEP 1: FETCH DAILY DATA & AO ------------------------------------------
 @st.cache_data(ttl=3600)
@@ -32,11 +40,11 @@ def fetch_daily_ao(tickers, days):
     df = yf.download(tickers, period=f"{days}d", interval="1d", progress=False, auto_adjust=False)
     # get the median price series for AO (High+Low)/2
     if isinstance(df.columns, pd.MultiIndex):
-        med = (df['High'] + df['Low']) / 2
+        median = (df['High'] + df['Low']) / 2
     else:
-        med = (df['High'] + df['Low']) / 2
-        med = pd.concat({t: med for t in tickers}, axis=1)  # single ticker case fallback
-    ao = calculate_ao(med)
+        # single‐ticker fallback
+        median = pd.DataFrame({tickers[0]: (df['High'] + df['Low'])/2})
+    ao = calculate_ao(median)
     return ao
 
 daily_ao = fetch_daily_ao(TICKERS, DAYS_LOOKBACK)
