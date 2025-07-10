@@ -95,7 +95,7 @@ def find_h1_triggers(tickers, days, daily_ao):
                      'Ticker':  t,
                      'Price':   round(h1.at[idx, 'Close'], 4)
                  })
-     return pd.DataFrame(triggers)
+     return pd.DataFrame(triggers) 
 
 
 df_triggers = find_h1_triggers(negative_ao_tickers, DAYS_LOOKBACK, daily_ao)
