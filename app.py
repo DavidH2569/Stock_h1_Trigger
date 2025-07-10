@@ -33,6 +33,21 @@ def calculate_ao(median_df: pd.DataFrame) -> pd.DataFrame:
     sma34 = median_df.rolling(window=34, min_periods=34).mean()
     return sma5 - sma34
 
+@st.cache_data(ttl=86400)
+def get_ticker_names(tickers):
+    """
+    Fetch each ticker’s longName (fallback to shortName or symbol).
+    Cached for 24h to avoid repeated yfinance calls.
+    """
+    names = {}
+    for t in tickers:
+        try:
+            info = yf.Ticker(t).info
+            names[t] = info.get('longName') or info.get('shortName') or t
+        except Exception:
+            names[t] = t
+    return names
+    
 # -- STEP 1: FETCH DAILY DATA & AO ------------------------------------------
 @st.cache_data(ttl=3600)
 def fetch_daily_ao(tickers, days):
@@ -108,7 +123,20 @@ df_triggers = find_h1_triggers(negative_ao_tickers, DAYS_LOOKBACK, daily_ao)
 
 # -- STEP 3: SHOW RESULTS ---------------------------------------------------
 if df_triggers.empty:
-    st.info("No H1 EMA20 cross-up triggers found in the last 90 days for tickers with daily AO < 0.")
+    st.info("No H1 EMA20 cross-up triggers found…")
 else:
+    # 1) get the unique tickers that triggered
+    uniq = df_triggers['Ticker'].unique().tolist()
+    name_map = get_ticker_names(uniq)
+
+    # 2) add the Name column
+    df_triggers['Name'] = df_triggers['Ticker'].map(name_map)
+
+    # 3) show Date, Time, Ticker, Name, Price
     st.subheader("H1 EMA20 Cross-Up Triggers (Daily AO < 0)")
-    st.dataframe(df_triggers.sort_values(['Date', 'Time', 'Ticker']).reset_index(drop=True))
+    st.dataframe(
+        df_triggers
+          .loc[:, ['Date', 'Time', 'Ticker', 'Name', 'Price']]
+          .sort_values(['Date','Time','Ticker'])
+          .reset_index(drop=True)
+    )
