@@ -1,7 +1,7 @@
 import streamlit as st
 import yfinance as yf
 import pandas as pd
-from awesome_oscillator import calculate_ao
+# from awesome_oscillator import calculate_ao
 
 st.set_page_config(page_title="H1 EMA20 Triggers (D1 AO < 0)", layout="wide")
 st.title("H1 EMA20 Cross-Up Triggers for Daily AO < 0")
