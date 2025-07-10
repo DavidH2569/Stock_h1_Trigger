@@ -61,40 +61,46 @@ st.write(f"Tickers with latest Daily AO < 0 (of {len(TICKERS)}): {', '.join(nega
 def find_h1_triggers(tickers, days, daily_ao):
     triggers = []
     for t in tickers:
--       h1 = yf.download(t, period=f"{days}d", interval="1h", progress=False, auto_adjust=False)
-+       # Download 1h bars for ticker t
-+       h1 = yf.download(t, period=f"{days}d", interval="1h", progress=False, auto_adjust=False)
-+       # If yfinance gave us a MultiIndex (e.g. ('Close','NVDA')), flatten to single level
-+       if isinstance(h1.columns, pd.MultiIndex):
-+           h1.columns = h1.columns.get_level_values(0)
+        # Download 1h bars for this ticker
+        h1 = yf.download(
+            t,
+            period=f"{days}d",
+            interval="1h",
+            progress=False,
+            auto_adjust=False
+        )
+        # If the DataFrame has a MultiIndex on columns, flatten it
+        if isinstance(h1.columns, pd.MultiIndex):
+            h1.columns = h1.columns.get_level_values(0)
 
+        # Skip if we don’t have enough data
         if h1.empty or len(h1) < 21:
             continue
 
-        # compute EMA20 on Close
-        h1['EMA20'] = h1['Close'].ewm(span=20, adjust=False).mean()
-        # shift to see prior
+        # Compute EMA20 on the Close price
+        h1['EMA20']      = h1['Close'].ewm(span=20, adjust=False).mean()
         h1['prev_close'] = h1['Close'].shift(1)
-        h1['prev_ema20']  = h1['EMA20'].shift(1)
+        h1['prev_ema20'] = h1['EMA20'].shift(1)
 
-        # cross-up condition
+        # Identify the cross-up: prior bar was below EMA20, current bar above
         cross_up = (
             (h1['prev_close']  < h1['prev_ema20']) &
             (h1['Close']       > h1['EMA20'])
         )
 
-        # for each trigger, check that on that date the daily AO < 0
+        # For each trigger, check the daily AO on that date
         for idx in h1.index[cross_up]:
-            dt = idx.tz_localize(None)  # naive timestamp
+            # Make sure we compare by calendar date
+            dt = idx.tz_localize(None)
             date_str = dt.date().isoformat()
-            # if that date in AO index, and still < 0
             if date_str in daily_ao.index and daily_ao.at[date_str, t] < 0:
                 triggers.append({
-                    'Date':    dt.date(),
-                    'Time':    dt.time(),
-                    'Ticker':  t,
-                    'Price':   round(h1.at[idx, 'Close'], 4)
+                    'Date':   dt.date(),
+                    'Time':   dt.time(),
+                    'Ticker': t,
+                    'Price':  round(h1.at[idx, 'Close'], 4)
                 })
+
     return pd.DataFrame(triggers)
 
 
