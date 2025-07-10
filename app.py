@@ -57,8 +57,8 @@ negative_ao_tickers = [
 st.write(f"Tickers with latest Daily AO < 0 (of {len(TICKERS)}): {', '.join(negative_ao_tickers)}")
 
 # -- STEP 2: FOR EACH, FETCH H1 & FIND CROSS‐UPS ----------------------------
-@st.cache_data(ttl=1800)
-def find_h1_triggers(tickers, days, daily_ao):
+ @st.cache_data(ttl=1800)
+ def find_h1_triggers(tickers, days, daily_ao):
      triggers = []
      for t in tickers:
 -        h1 = yf.download(t, period=f"{days}d", interval="1h", progress=False, auto_adjust=False)
@@ -95,7 +95,7 @@ def find_h1_triggers(tickers, days, daily_ao):
                      'Ticker':  t,
                      'Price':   round(h1.at[idx, 'Close'], 4)
                  })
-     return pd.DataFrame(triggers) 
+     return pd.DataFrame(triggers)
 
 
 df_triggers = find_h1_triggers(negative_ao_tickers, DAYS_LOOKBACK, daily_ao)
