@@ -57,45 +57,45 @@ negative_ao_tickers = [
 st.write(f"Tickers with latest Daily AO < 0 (of {len(TICKERS)}): {', '.join(negative_ao_tickers)}")
 
 # -- STEP 2: FOR EACH, FETCH H1 & FIND CROSS‐UPS ----------------------------
- @st.cache_data(ttl=1800)
- def find_h1_triggers(tickers, days, daily_ao):
-     triggers = []
-     for t in tickers:
--        h1 = yf.download(t, period=f"{days}d", interval="1h", progress=False, auto_adjust=False)
-+        # Download 1h bars for ticker t
-+        h1 = yf.download(t, period=f"{days}d", interval="1h", progress=False, auto_adjust=False)
-+        # If yfinance gave us a MultiIndex (e.g. ('Close','NVDA')), flatten to single level
-+        if isinstance(h1.columns, pd.MultiIndex):
-+            h1.columns = h1.columns.get_level_values(0)
+@st.cache_data(ttl=1800)
+def find_h1_triggers(tickers, days, daily_ao):
+    triggers = []
+    for t in tickers:
+-       h1 = yf.download(t, period=f"{days}d", interval="1h", progress=False, auto_adjust=False)
++       # Download 1h bars for ticker t
++       h1 = yf.download(t, period=f"{days}d", interval="1h", progress=False, auto_adjust=False)
++       # If yfinance gave us a MultiIndex (e.g. ('Close','NVDA')), flatten to single level
++       if isinstance(h1.columns, pd.MultiIndex):
++           h1.columns = h1.columns.get_level_values(0)
 
-         if h1.empty or len(h1) < 21:
-             continue
+        if h1.empty or len(h1) < 21:
+            continue
 
-         # compute EMA20 on Close
-         h1['EMA20'] = h1['Close'].ewm(span=20, adjust=False).mean()
-         # shift to see prior
-         h1['prev_close'] = h1['Close'].shift(1)
-         h1['prev_ema20']  = h1['EMA20'].shift(1)
+        # compute EMA20 on Close
+        h1['EMA20'] = h1['Close'].ewm(span=20, adjust=False).mean()
+        # shift to see prior
+        h1['prev_close'] = h1['Close'].shift(1)
+        h1['prev_ema20']  = h1['EMA20'].shift(1)
 
-         # cross-up condition
-         cross_up = (
-             (h1['prev_close']  < h1['prev_ema20']) &
-             (h1['Close']       > h1['EMA20'])
-         )
+        # cross-up condition
+        cross_up = (
+            (h1['prev_close']  < h1['prev_ema20']) &
+            (h1['Close']       > h1['EMA20'])
+        )
 
-         # for each trigger, check that on that date the daily AO < 0
-         for idx in h1.index[cross_up]:
-             dt = idx.tz_localize(None)  # naive timestamp
-             date_str = dt.date().isoformat()
-             # if that date in AO index, and still < 0
-             if date_str in daily_ao.index and daily_ao.at[date_str, t] < 0:
-                 triggers.append({
-                     'Date':    dt.date(),
-                     'Time':    dt.time(),
-                     'Ticker':  t,
-                     'Price':   round(h1.at[idx, 'Close'], 4)
-                 })
-     return pd.DataFrame(triggers)
+        # for each trigger, check that on that date the daily AO < 0
+        for idx in h1.index[cross_up]:
+            dt = idx.tz_localize(None)  # naive timestamp
+            date_str = dt.date().isoformat()
+            # if that date in AO index, and still < 0
+            if date_str in daily_ao.index and daily_ao.at[date_str, t] < 0:
+                triggers.append({
+                    'Date':    dt.date(),
+                    'Time':    dt.time(),
+                    'Ticker':  t,
+                    'Price':   round(h1.at[idx, 'Close'], 4)
+                })
+    return pd.DataFrame(triggers)
 
 
 df_triggers = find_h1_triggers(negative_ao_tickers, DAYS_LOOKBACK, daily_ao)
