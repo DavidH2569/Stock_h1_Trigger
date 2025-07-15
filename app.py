@@ -23,7 +23,7 @@ TICKERS = ["NVDA", "MSFT", "AAPL", "AMZN", "GOOG", "META", "AVGO", "TSLA", "JPM"
            "PANW", "CMCSA", "ANET", "LRCX", "CRWD", "LOW", "ADP", "KKR", "KLAC", "ADI",
            "VRTX", "COP", "APH", "MDT", "CB", "NKE", "SBUX", "LMT", "MMC", "ICE",
            ]
-DAYS_LOOKBACK = 90
+DAYS_LOOKBACK = 60
 def calculate_ao(median_df: pd.DataFrame) -> pd.DataFrame:
     """
     Awesome Oscillator: SMA5(median_price) - SMA34(median_price)
